@@ -1,6 +1,7 @@
 import json
 import math
 import time
+import base64
 import requests
 import streamlit as st
 import folium
@@ -28,12 +29,15 @@ st.markdown("""
     /* ---------- Banner ---------- */
     .banner-policia {
         background: linear-gradient(135deg, #7fa39c 0%, #5f8b83 100%);
-        padding: 34px 34px 30px 34px;
+        padding: 26px 34px;
         border-radius: 22px;
         color: white;
         margin-bottom: 22px;
         position: relative;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 22px;
     }
     .banner-policia::before {
         content: "";
@@ -45,19 +49,30 @@ st.markdown("""
         background: rgba(255,255,255,0.08);
         border-radius: 50%;
     }
+    .banner-policia .escudo {
+        width: 78px;
+        height: 78px;
+        object-fit: contain;
+        flex-shrink: 0;
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25));
+    }
+    .banner-policia .banner-texto {
+        position: relative;
+        z-index: 1;
+    }
     .banner-policia h1 {
         color: white !important;
-        margin: 0 0 8px 0;
-        font-size: 1.9rem;
+        margin: 0 0 6px 0;
+        font-size: 1.7rem;
         font-weight: 700;
         letter-spacing: -0.3px;
     }
     .banner-policia p {
         margin: 0;
         color: #eaf3f0;
-        font-size: 0.97rem;
-        line-height: 1.5;
-        max-width: 560px;
+        font-size: 0.92rem;
+        line-height: 1.4;
+        max-width: 520px;
     }
     .stats-fila {
         display: flex;
@@ -207,6 +222,17 @@ st.markdown("""
 # ---------- Datos ----------
 with open("estaciones.json", "r", encoding="utf-8") as f:
     ESTACIONES = json.load(f)
+
+
+def imagen_a_base64(ruta):
+    try:
+        with open(ruta, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except FileNotFoundError:
+        return None
+
+
+ESCUDO_B64 = imagen_a_base64("policia-nacional-escudo.png")
 
 VELOCIDADES_KMH = {
     "🚶 A pie": 5,
@@ -413,15 +439,22 @@ def mostrar_resultados(lat, lon, limite, key_prefix="res"):
 
 
 # ---------- Interfaz ----------
+escudo_html = (
+    f'<img src="data:image/png;base64,{ESCUDO_B64}" class="escudo" alt="Escudo Policía Nacional">'
+    if ESCUDO_B64 else ""
+)
+
 st.markdown(f"""
 <div class="banner-policia">
-    <h1>Estaciones Policiales Más Cercanas</h1>
-    <p>Servicio en la nube que ubica las estaciones policiales reales más cercanas a tu posición
-    en Honduras y estima cuánto tardarías en llegar a pie, en bici, en carro o en bus.</p>
-    <div class="stats-fila">
-        <span class="stat-chip">🛡️ {len(ESTACIONES)} estaciones registradas</span>
-        <span class="stat-chip">🇭🇳 Cobertura nacional</span>
-        <span class="stat-chip">🛰️ Vista satelital</span>
+    {escudo_html}
+    <div class="banner-texto">
+        <h1>Estaciones Policiales Más Cercanas</h1>
+        <p>Ubica la estación policial más cercana y cuánto tardarías en llegar.</p>
+        <div class="stats-fila">
+            <span class="stat-chip">🛡️ {len(ESTACIONES)} estaciones registradas</span>
+            <span class="stat-chip">🇭🇳 Cobertura nacional</span>
+            <span class="stat-chip">🛰️ Vista satelital</span>
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
