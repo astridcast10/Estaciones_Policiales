@@ -1,7 +1,187 @@
 [
-  { "nombre": "Estación Centro", "lat": 14.0818, "lon": -87.1921 },
-  { "nombre": "Estación Norte", "lat": 14.1090, "lon": -87.2060 },
-  { "nombre": "Estación Sur", "lat": 14.0520, "lon": -87.2100 },
-  { "nombre": "Estación Kennedy", "lat": 14.0956, "lon": -87.1730 },
-  { "nombre": "Estación Comayagüela", "lat": 14.0940, "lon": -87.2170 }
+  {
+    "nombre": "Estación de Policía Barrio El Manchén (Tegucigalpa, Francisco Morazán)",
+    "lat": 14.1079146,
+    "lon": -87.1906047
+  },
+  {
+    "nombre": "Posta Policial (Centro) (San Pedro Sula, Cortés)",
+    "lat": 15.476439,
+    "lon": -88.0209728
+  },
+  {
+    "nombre": "Posta de Policía Camagüey (Puerto Cortés, Cortés)",
+    "lat": 15.8623767,
+    "lon": -87.9248849
+  },
+  {
+    "nombre": "UMEP No.12 Villanueva (Villanueva, Cortés)",
+    "lat": 15.317624,
+    "lon": -87.9937251
+  },
+  {
+    "nombre": "Policía Nacional Santa Bárbara UMEP 16 (Santa Bárbara (centro))",
+    "lat": 14.9064858,
+    "lon": -88.2520188
+  },
+  {
+    "nombre": "Jefatura de Estación Policial Quimistán (Quimistán, Santa Bárbara)",
+    "lat": 15.3485251,
+    "lon": -88.4014455
+  },
+  {
+    "nombre": "Policía Nacional Ilama (Ilama, Santa Bárbara)",
+    "lat": 15.0667539,
+    "lon": -88.2254452
+  },
+  {
+    "nombre": "Posta Policial San José de Colinas (San José de Colinas, Santa Bárbara)",
+    "lat": 15.0419594,
+    "lon": -88.3025929
+  },
+  {
+    "nombre": "Policía Nacional San Nicolás (San Nicolás, Santa Bárbara)",
+    "lat": 14.9372426,
+    "lon": -88.3265871
+  },
+  {
+    "nombre": "Posta Policial Naranjito (Naranjito, Santa Bárbara)",
+    "lat": 14.9527575,
+    "lon": -88.6847895
+  },
+  {
+    "nombre": "Posta Policial La Ceibita (La Ceibita, Santa Bárbara)",
+    "lat": 15.3134678,
+    "lon": -88.253676
+  },
+  {
+    "nombre": "Jefatura de Policía Comayagua (Comayagua (centro))",
+    "lat": 14.4608823,
+    "lon": -87.6664399
+  },
+  {
+    "nombre": "Posta Policial Central DPI Siguatepeque (Siguatepeque, Comayagua)",
+    "lat": 14.5936503,
+    "lon": -87.8408823
+  },
+  {
+    "nombre": "Policía Nacional Taulabé (Taulabé, Comayagua)",
+    "lat": 14.6947156,
+    "lon": -87.9683289
+  },
+  {
+    "nombre": "Policía Nacional San Jerónimo (San Jerónimo, Comayagua)",
+    "lat": 14.6289902,
+    "lon": -87.6070414
+  },
+  {
+    "nombre": "Policía Nacional Minas de Oro (Minas de Oro, Comayagua)",
+    "lat": 14.7944187,
+    "lon": -87.3477207
+  },
+  {
+    "nombre": "Posta Policial Esquías (Esquías, Comayagua)",
+    "lat": 14.7379106,
+    "lon": -87.3659125
+  },
+  {
+    "nombre": "UMEP No.11 El Progreso (El Progreso, Yoro)",
+    "lat": 15.3946163,
+    "lon": -87.8082829
+  },
+  {
+    "nombre": "UDEP No.18 Yoro (Yoro (centro))",
+    "lat": 15.1365201,
+    "lon": -87.1254273
+  },
+  {
+    "nombre": "Posta Policial Bonitillo (La Ceiba, Atlántida)",
+    "lat": 15.759027,
+    "lon": -86.8688754
+  },
+  {
+    "nombre": "Policía Nacional Tela (Tela, Atlántida)",
+    "lat": 15.7667875,
+    "lon": -87.4671371
+  },
+  {
+    "nombre": "Posta Policial (Centro) (Choluteca)",
+    "lat": 13.3142075,
+    "lon": -87.1472005
+  },
+  {
+    "nombre": "Posta Policial Jícaro Galán (Nacaome, Valle)",
+    "lat": 13.5310141,
+    "lon": -87.4381769
+  },
+  {
+    "nombre": "Policía Nacional San Lorenzo (San Lorenzo, Valle)",
+    "lat": 13.4259048,
+    "lon": -87.444879
+  },
+  {
+    "nombre": "Posta Policial Danlí (Danlí, El Paraíso)",
+    "lat": 14.0392762,
+    "lon": -86.5717099
+  },
+  {
+    "nombre": "Policía Nacional Yuscarán (Yuscarán, El Paraíso)",
+    "lat": 13.9434194,
+    "lon": -86.8523122
+  },
+  {
+    "nombre": "Posta Policial Telica (Juticalpa, Olancho)",
+    "lat": 14.723103,
+    "lon": -86.1379545
+  },
+  {
+    "nombre": "Policía Nacional Catacamas (Catacamas, Olancho)",
+    "lat": 14.8463755,
+    "lon": -85.8881307
+  },
+  {
+    "nombre": "Posta Policía Nacional La Esperanza (La Esperanza, Intibucá)",
+    "lat": 14.3086516,
+    "lon": -88.177636
+  },
+  {
+    "nombre": "Posta Policial Villami (Gracias, Lempira)",
+    "lat": 14.621423,
+    "lon": -88.5894447
+  },
+  {
+    "nombre": "Policía Nacional Ocotepeque (Ocotepeque)",
+    "lat": 14.434708,
+    "lon": -89.1861526
+  },
+  {
+    "nombre": "Posta Policial Ilanga (Trujillo, Colón)",
+    "lat": 15.7031074,
+    "lon": -86.085076
+  },
+  {
+    "nombre": "Posta Policial French Harbour (Roatán, Islas de la Bahía)",
+    "lat": 16.3526201,
+    "lon": -86.4578959
+  },
+  {
+    "nombre": "UDEP No.04 Copán (Santa Rosa de Copán, Copán)",
+    "lat": 14.7799972,
+    "lon": -88.7774414
+  },
+  {
+    "nombre": "Estación de Policía Puerto Lempira (Puerto Lempira, Gracias a Dios)",
+    "lat": 15.2611144,
+    "lon": -83.7781985
+  },
+  {
+    "nombre": "Policía Nacional Marcala (Marcala, La Paz)",
+    "lat": 14.1562309,
+    "lon": -88.037697
+  },
+  {
+    "nombre": "Policía Nacional La Paz (La Paz (centro))",
+    "lat": 14.3242835,
+    "lon": -87.6815425
+  }
 ]
