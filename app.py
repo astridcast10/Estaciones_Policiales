@@ -8,6 +8,90 @@ from streamlit_js_eval import get_geolocation
 
 st.set_page_config(page_title="Estaciones Policiales Cercanas", page_icon="🚓", layout="centered")
 
+st.markdown("""
+<style>
+    .banner-policia {
+        background: linear-gradient(135deg, #0b1f4d 0%, #16327a 60%, #dc1e1e 100%);
+        padding: 22px 24px;
+        border-radius: 14px;
+        color: white;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .banner-policia h1 {
+        color: white !important;
+        margin: 0 0 6px 0;
+        font-size: 1.7rem;
+    }
+    .banner-policia p {
+        margin: 0;
+        color: #dbe4ff;
+        font-size: 0.95rem;
+    }
+    .tarjeta-estacion {
+        border: 1px solid #e2e2e2;
+        border-left: 7px solid #dc1e1e;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 14px;
+        background: #fff8f8;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .tarjeta-estacion .num {
+        display: inline-block;
+        background: #dc1e1e;
+        color: white;
+        font-weight: 700;
+        border-radius: 50%;
+        width: 26px;
+        height: 26px;
+        text-align: center;
+        line-height: 26px;
+        margin-right: 8px;
+        font-size: 0.9rem;
+    }
+    .tarjeta-estacion .nombre {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0b1f4d;
+    }
+    .tarjeta-estacion .distancia {
+        display: inline-block;
+        background: #16327a;
+        color: white;
+        border-radius: 999px;
+        padding: 2px 12px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-left: 4px;
+    }
+    .tiempos-fila {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    .tiempo-pill {
+        background: #eef1fb;
+        border: 1px solid #c7d0f0;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        color: #16327a;
+        font-weight: 600;
+    }
+    .tarjeta-ubicacion {
+        border: 1px dashed #16327a;
+        border-radius: 10px;
+        padding: 10px 16px;
+        background: #eef1fb;
+        color: #16327a;
+        font-weight: 600;
+        margin-bottom: 14px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ---------- Estaciones de respaldo (por si OpenStreetMap no responde) ----------
 with open("estaciones.json", "r", encoding="utf-8") as f:
     ESTACIONES_RESPALDO = json.load(f)
@@ -54,11 +138,12 @@ def obtener_estaciones_osm(lat, lon):
     radios_m = [3000, 6000, 12000, 25000, 50000]
     for radio in radios_m:
         query = f"""
-        [out:json][timeout:20];
+        [out:json][timeout:25];
         (
           node["amenity"="police"](around:{radio},{lat},{lon});
           way["amenity"="police"](around:{radio},{lat},{lon});
           relation["amenity"="police"](around:{radio},{lat},{lon});
+          nwr["name"~"polic",i](around:{radio},{lat},{lon});
         );
         out center;
         """
@@ -66,7 +151,7 @@ def obtener_estaciones_osm(lat, lon):
             resp = requests.post(
                 "https://overpass-api.de/api/interpreter",
                 data={"data": query},
-                timeout=15,
+                timeout=25,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -74,6 +159,7 @@ def obtener_estaciones_osm(lat, lon):
             continue
 
         estaciones = []
+        vistos = set()
         for el in data.get("elements", []):
             if el["type"] == "node":
                 elat, elon = el.get("lat"), el.get("lon")
@@ -82,6 +168,10 @@ def obtener_estaciones_osm(lat, lon):
                 elat, elon = centro.get("lat"), centro.get("lon")
             if elat is None or elon is None:
                 continue
+            clave = (round(elat, 5), round(elon, 5))
+            if clave in vistos:
+                continue
+            vistos.add(clave)
             nombre = el.get("tags", {}).get("name") or "Puesto policial (OpenStreetMap)"
             estaciones.append({"nombre": nombre, "lat": elat, "lon": elon})
 
@@ -111,29 +201,43 @@ def buscar_estaciones_cercanas(lat, lon, limite=3):
             "distancia_km": round(distancia, 2),
         })
     resultados.sort(key=lambda x: x["distancia_km"])
-    return resultados[:limite], fuente
+    return resultados[:limite], fuente, radio_usado
 
 
 def mostrar_resultados(lat, lon, limite):
     with st.spinner("Buscando estaciones policiales reales cerca de tu ubicación..."):
-        resultados, fuente = buscar_estaciones_cercanas(lat, lon, limite)
+        resultados, fuente, radio_usado = buscar_estaciones_cercanas(lat, lon, limite)
 
     if fuente == "respaldo":
         st.warning(
             "No se encontraron puestos policiales registrados en OpenStreetMap cerca de tu "
-            "ubicación (o el servicio no respondió), así que se muestran estaciones de respaldo "
-            "de ejemplo. En una emergencia real, llama al 911."
+            "ubicación (búsqueda hasta 50 km) o el servicio no respondió, así que se muestran "
+            "estaciones de respaldo de ejemplo. En una emergencia real, llama al 911."
         )
     else:
-        st.caption("Estaciones obtenidas en tiempo real desde OpenStreetMap.")
+        st.caption(f"🌐 Estaciones obtenidas en tiempo real desde OpenStreetMap (radio de búsqueda: {radio_usado/1000:.0f} km).")
 
     st.subheader("📍 Resultados")
+
+    st.markdown(
+        f'<div class="tarjeta-ubicacion">📍 Tu ubicación: {lat:.5f}, {lon:.5f}</div>',
+        unsafe_allow_html=True,
+    )
+
     for i, r in enumerate(resultados, start=1):
         tiempos = estimar_tiempos(r["distancia_km"])
-        st.markdown(f"**{i}. {r['nombre']}** — {r['distancia_km']} km")
-        cols = st.columns(len(tiempos))
-        for col, (modo, minutos) in zip(cols, tiempos.items()):
-            col.metric(modo, formatear_minutos(minutos))
+        pills = "".join(
+            f'<span class="tiempo-pill">{modo} {formatear_minutos(min_)}</span>'
+            for modo, min_ in tiempos.items()
+        )
+        st.markdown(f"""
+        <div class="tarjeta-estacion">
+            <span class="num">{i}</span>
+            <span class="nombre">🛡️ {r['nombre']}</span>
+            <span class="distancia">{r['distancia_km']} km</span>
+            <div class="tiempos-fila">{pills}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.caption("⏱️ Tiempos estimados según distancia en línea recta y velocidad promedio de cada medio (no son rutas reales de calles ni horarios de bus).")
 
@@ -186,12 +290,13 @@ def mostrar_resultados(lat, lon, limite):
 
 
 # ---------- Interfaz ----------
-st.title("🚓 Estaciones Policiales Más Cercanas")
-st.write(
-    "Servicio en la nube que encuentra las estaciones policiales reales más cercanas a tu "
-    "ubicación (usando OpenStreetMap) y estima cuánto tardarías en llegar a pie, en bici, "
-    "en carro o en bus."
-)
+st.markdown("""
+<div class="banner-policia">
+    <h1>🚓 Estaciones Policiales Más Cercanas</h1>
+    <p>Servicio en la nube que encuentra las estaciones policiales reales más cercanas a tu ubicación
+    (usando OpenStreetMap) y estima cuánto tardarías en llegar a pie, en bici, en carro o en bus.</p>
+</div>
+""", unsafe_allow_html=True)
 
 limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
 
@@ -202,18 +307,21 @@ with tab_gps:
 
     if st.button("Usar mi ubicación actual"):
         st.session_state["quiere_gps"] = True
+        st.session_state["gps_intento"] = st.session_state.get("gps_intento", 0) + 1
 
     if st.session_state.get("quiere_gps"):
-        # Este componente necesita 1-2 reruns automáticos para resolver el permiso
-        # del navegador, así que la bandera de arriba debe seguir activa mientras tanto.
-        ubicacion = get_geolocation()
+        intento = st.session_state.get("gps_intento", 1)
+        # Cada intento usa una llave distinta: así el componente se vuelve a montar
+        # y le vuelve a pedir la ubicación al navegador en vez de quedarse pegado
+        # con el resultado (o la falta de resultado) del primer intento.
+        ubicacion = get_geolocation(component_key=f"geo_{intento}")
         if ubicacion is not None:
             lat = ubicacion["coords"]["latitude"]
             lon = ubicacion["coords"]["longitude"]
             st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
             mostrar_resultados(lat, lon, limite)
         else:
-            st.info("Obteniendo tu ubicación... si no cambia en unos segundos, revisa el permiso de ubicación en el candado del navegador y vuelve a presionar el botón.")
+            st.info("Obteniendo tu ubicación... acepta el permiso del navegador. Si no cambia en unos segundos, presiona de nuevo el botón (esto reintenta la solicitud).")
 
 with tab_manual:
     with st.form("form_manual"):
