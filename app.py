@@ -2,6 +2,7 @@ import json
 import math
 import streamlit as st
 import pandas as pd
+import pydeck as pdk
 
 st.set_page_config(page_title="Estaciones Policiales Cercanas", page_icon="🚓", layout="centered")
 
@@ -57,15 +58,38 @@ if buscar:
         st.markdown(f"**{i}. {r['nombre']}** — {r['distancia_km']} km")
 
     # Mapa
-    df_mapa = pd.DataFrame(resultados)
-    df_mapa = pd.concat([
-        df_mapa,
-        pd.DataFrame([{"nombre": "Tu ubicación", "lat": lat, "lon": lon, "distancia_km": 0}])
-    ], ignore_index=True)
-    st.map(df_mapa[["lat", "lon"]])
+    df_estaciones = pd.DataFrame(resultados)
+    df_usuario = pd.DataFrame([{"nombre": "Tu ubicación", "lat": lat, "lon": lon}])
+
+    capa_estaciones = pdk.Layer(
+        "ScatterplotLayer",
+        data=df_estaciones,
+        get_position="[lon, lat]",
+        get_fill_color="[220, 30, 30, 200]",  # rojo
+        get_radius=120,
+        pickable=True,
+    )
+
+    capa_usuario = pdk.Layer(
+        "ScatterplotLayer",
+        data=df_usuario,
+        get_position="[lon, lat]",
+        get_fill_color="[30, 90, 220, 220]",  # azul
+        get_radius=180,
+        pickable=True,
+    )
+
+    vista = pdk.ViewState(latitude=lat, longitude=lon, zoom=12)
+
+    st.pydeck_chart(pdk.Deck(
+        layers=[capa_estaciones, capa_usuario],
+        initial_view_state=vista,
+        tooltip={"text": "{nombre}"}
+    ))
+    st.caption("🔴 Estaciones policiales &nbsp;&nbsp; 🔵 Tu ubicación")
 
     with st.expander("Ver datos en formato tabla"):
-        st.dataframe(df_mapa)
+        st.dataframe(pd.concat([df_estaciones, df_usuario], ignore_index=True))
 
 st.divider()
 st.caption("Proyecto de clase — Cloud Computing. Estaciones cargadas desde estaciones.json.")
