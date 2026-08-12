@@ -88,17 +88,21 @@ tab_gps, tab_manual = st.tabs(["📡 Usar mi ubicación", "✍️ Escribir coord
 
 with tab_gps:
     st.write("Presiona el botón y acepta el permiso de ubicación que te pida el navegador.")
-    ubicar = st.button("Usar mi ubicación actual")
 
-    if ubicar:
-        ubicacion = get_geolocation()  # pide permiso al navegador y trae GPS/wifi real
+    if st.button("Usar mi ubicación actual"):
+        st.session_state["quiere_gps"] = True
+
+    if st.session_state.get("quiere_gps"):
+        # Este componente necesita 1-2 reruns automáticos para resolver el permiso
+        # del navegador, así que la bandera de arriba debe seguir activa mientras tanto.
+        ubicacion = get_geolocation()
         if ubicacion is not None:
             lat = ubicacion["coords"]["latitude"]
             lon = ubicacion["coords"]["longitude"]
             st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
             mostrar_resultados(lat, lon, limite)
         else:
-            st.warning("No se pudo obtener tu ubicación. Revisa que le hayas dado permiso al navegador, o usa la pestaña de coordenadas manuales.")
+            st.info("Obteniendo tu ubicación... si no cambia en unos segundos, revisa el permiso de ubicación en el candado del navegador y vuelve a presionar el botón.")
 
 with tab_manual:
     with st.form("form_manual"):
