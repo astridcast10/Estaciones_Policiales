@@ -1,5 +1,6 @@
 import json
 import math
+import time
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -73,13 +74,13 @@ st.markdown("""
     }
 
     /* ---------- Contenedor principal ---------- */
-    .seccion-card {
+    div[data-testid="stVerticalBlockBorderWrapper"] {
         background: white;
-        border-radius: 22px;
-        padding: 26px 28px;
+        border-radius: 22px !important;
+        padding: 10px 6px;
         box-shadow: 0 4px 18px rgba(95,139,131,0.10);
+        border: 1px solid #eef3f1 !important;
         margin-bottom: 20px;
-        border: 1px solid #eef3f1;
     }
 
     /* ---------- Tabs ---------- */
