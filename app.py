@@ -28,33 +28,17 @@ st.markdown("""
 
     /* ---------- Banner ---------- */
     .banner-policia {
-        background: linear-gradient(135deg, #7fa39c 0%, #5f8b83 100%);
-        padding: 26px 34px;
         border-radius: 22px;
         color: white;
         margin-bottom: 22px;
         position: relative;
         overflow: hidden;
-        display: flex;
-        align-items: center;
-        gap: 22px;
+        padding: 30px 34px;
     }
-    .banner-policia::before {
-        content: "";
+    .banner-policia .overlay-oscuro {
         position: absolute;
-        top: -40px;
-        right: -40px;
-        width: 160px;
-        height: 160px;
-        background: rgba(255,255,255,0.08);
-        border-radius: 50%;
-    }
-    .banner-policia .escudo {
-        width: 78px;
-        height: 78px;
-        object-fit: contain;
-        flex-shrink: 0;
-        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25));
+        inset: 0;
+        background: linear-gradient(135deg, rgba(15,35,32,0.72) 0%, rgba(51,84,76,0.65) 100%);
     }
     .banner-policia .banner-texto {
         position: relative;
@@ -62,17 +46,19 @@ st.markdown("""
     }
     .banner-policia h1 {
         color: white !important;
-        margin: 0 0 6px 0;
-        font-size: 1.7rem;
+        margin: 0 0 8px 0;
+        font-size: 1.9rem;
         font-weight: 700;
         letter-spacing: -0.3px;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.35);
     }
     .banner-policia p {
         margin: 0;
-        color: #eaf3f0;
-        font-size: 0.92rem;
+        color: #eef3f0;
+        font-size: 0.95rem;
         line-height: 1.4;
         max-width: 520px;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
     .stats-fila {
         display: flex;
@@ -439,14 +425,15 @@ def mostrar_resultados(lat, lon, limite, key_prefix="res"):
 
 
 # ---------- Interfaz ----------
-escudo_html = (
-    f'<img src="data:image/png;base64,{ESCUDO_B64}" class="escudo" alt="Escudo Policía Nacional">'
-    if ESCUDO_B64 else ""
+fondo_style = (
+    f"background: url('data:image/png;base64,{ESCUDO_B64}') center/cover no-repeat;"
+    if ESCUDO_B64 else
+    "background: linear-gradient(135deg, #7fa39c 0%, #5f8b83 100%);"
 )
 
 st.markdown(f"""
-<div class="banner-policia">
-    {escudo_html}
+<div class="banner-policia" style="{fondo_style}">
+    <div class="overlay-oscuro"></div>
     <div class="banner-texto">
         <h1>Estaciones Policiales Más Cercanas</h1>
         <p>Ubica la estación policial más cercana y cuánto tardarías en llegar.</p>
