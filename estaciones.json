@@ -1,0 +1,7 @@
+[
+  { "nombre": "Estación Centro", "lat": 14.0818, "lon": -87.1921 },
+  { "nombre": "Estación Norte", "lat": 14.1090, "lon": -87.2060 },
+  { "nombre": "Estación Sur", "lat": 14.0520, "lon": -87.2100 },
+  { "nombre": "Estación Kennedy", "lat": 14.0956, "lon": -87.1730 },
+  { "nombre": "Estación Comayagüela", "lat": 14.0940, "lon": -87.2170 }
+]
