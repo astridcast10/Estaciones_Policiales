@@ -194,16 +194,6 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* ---------- Footer ---------- */
-    .footer-nota {
-        text-align: center;
-        color: #8a9a95;
-        font-size: 0.8rem;
-        margin-top: 28px;
-        padding-top: 16px;
-        border-top: 1px solid #e5ece9;
-    }
-
     /* ---------- Titulos de sección ---------- */
     h3 {
         color: #2b3d38 !important;
@@ -337,7 +327,7 @@ def mostrar_resultados(lat, lon, limite):
 # ---------- Interfaz ----------
 st.markdown(f"""
 <div class="banner-policia">
-    <h1>🚓 Estaciones Policiales Más Cercanas</h1>
+    <h1>Estaciones Policiales Más Cercanas</h1>
     <p>Servicio en la nube que ubica las estaciones policiales reales más cercanas a tu posición
     en Honduras y estima cuánto tardarías en llegar a pie, en bici, en carro o en bus.</p>
     <div class="stats-fila">
@@ -348,49 +338,55 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="seccion-card">', unsafe_allow_html=True)
+MAX_INTENTOS_GPS = 15  # ~15 segundos de espera automática antes de avisar que algo falló
 
-limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
+with st.container(border=True):
+    limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
 
-tab_gps, tab_manual = st.tabs(["📡 Usar mi ubicación", "✍️ Escribir coordenadas"])
+    tab_gps, tab_manual = st.tabs(["📡 Usar mi ubicación", "✍️ Escribir coordenadas"])
 
-with tab_gps:
-    st.write("Presiona el botón y acepta el permiso de ubicación que te pida el navegador.")
+    with tab_gps:
+        st.write("Presiona el botón y acepta el permiso de ubicación que te pida el navegador.")
 
-    if st.button("Usar mi ubicación actual"):
-        st.session_state["quiere_gps"] = True
-        st.session_state["gps_intento"] = st.session_state.get("gps_intento", 0) + 1
+        if st.button("Usar mi ubicación actual"):
+            st.session_state["quiere_gps"] = True
+            st.session_state["gps_poll"] = 0
 
-    if st.session_state.get("quiere_gps"):
-        intento = st.session_state.get("gps_intento", 1)
-        # Cada intento usa una llave distinta: así el componente se vuelve a montar
-        # y le vuelve a pedir la ubicación al navegador en vez de quedarse pegado
-        # con el resultado (o la falta de resultado) del primer intento.
-        ubicacion = get_geolocation(component_key=f"geo_{intento}")
-        if ubicacion is not None:
-            lat = ubicacion["coords"]["latitude"]
-            lon = ubicacion["coords"]["longitude"]
-            st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
-            mostrar_resultados(lat, lon, limite)
-        else:
-            st.info("Obteniendo tu ubicación... acepta el permiso del navegador. Si no cambia en unos segundos, presiona de nuevo el botón (esto reintenta la solicitud).")
+        if st.session_state.get("quiere_gps"):
+            # Usamos SIEMPRE la misma key: así el componente no se reinicia en cada
+            # intento, sino que sigue esperando la respuesta asíncrona del navegador.
+            ubicacion = get_geolocation(component_key="geo_estatico")
 
-with tab_manual:
-    with st.form("form_manual"):
-        col1, col2 = st.columns(2)
-        with col1:
-            lat_m = st.number_input("Latitud", value=14.0818, format="%.6f")
-        with col2:
-            lon_m = st.number_input("Longitud", value=-87.1921, format="%.6f")
-        buscar_manual = st.form_submit_button("Buscar")
+            if ubicacion is not None:
+                lat = ubicacion["coords"]["latitude"]
+                lon = ubicacion["coords"]["longitude"]
+                st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
+                mostrar_resultados(lat, lon, limite)
+            else:
+                intentos = st.session_state.get("gps_poll", 0)
+                if intentos < MAX_INTENTOS_GPS:
+                    st.session_state["gps_poll"] = intentos + 1
+                    with st.spinner("Obteniendo tu ubicación... acepta el permiso del navegador."):
+                        time.sleep(1)
+                    st.rerun()
+                else:
+                    st.warning(
+                        "No pudimos obtener tu ubicación. Revisa que el navegador tenga el "
+                        "permiso de ubicación activado para este sitio (ícono de candado junto "
+                        "a la dirección web) y vuelve a intentar."
+                    )
+                    if st.button("Reintentar"):
+                        st.session_state["gps_poll"] = 0
+                        st.rerun()
 
-    if buscar_manual:
-        mostrar_resultados(lat_m, lon_m, limite)
+    with tab_manual:
+        with st.form("form_manual"):
+            col1, col2 = st.columns(2)
+            with col1:
+                lat_m = st.number_input("Latitud", value=14.0818, format="%.6f")
+            with col2:
+                lon_m = st.number_input("Longitud", value=-87.1921, format="%.6f")
+            buscar_manual = st.form_submit_button("Buscar")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown(
-    '<div class="footer-nota">Proyecto de clase — Cloud Computing, UTH · '
-    'Estaciones policiales de Honduras (relevamiento propio del equipo)</div>',
-    unsafe_allow_html=True,
-)
+        if buscar_manual:
+            mostrar_resultados(lat_m, lon_m, limite)
