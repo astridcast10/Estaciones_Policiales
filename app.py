@@ -3,6 +3,7 @@ import math
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+from streamlit_js_eval import get_geolocation
 
 st.set_page_config(page_title="Estaciones Policiales Cercanas", page_icon="🚓", layout="centered")
 
@@ -36,28 +37,13 @@ def buscar_estaciones_cercanas(lat, lon, limite=3):
     return resultados[:limite]
 
 
-# ---------- Interfaz ----------
-st.title("🚓 Estaciones Policiales Más Cercanas")
-st.write("Servicio en la nube que, dadas tus coordenadas, encuentra las estaciones policiales más cercanas.")
-
-with st.form("form_busqueda"):
-    col1, col2 = st.columns(2)
-    with col1:
-        lat = st.number_input("Latitud", value=14.0818, format="%.6f")
-    with col2:
-        lon = st.number_input("Longitud", value=-87.1921, format="%.6f")
-
-    limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
-    buscar = st.form_submit_button("Buscar")
-
-if buscar:
+def mostrar_resultados(lat, lon, limite):
     resultados = buscar_estaciones_cercanas(lat, lon, limite)
 
     st.subheader("📍 Resultados")
     for i, r in enumerate(resultados, start=1):
         st.markdown(f"**{i}. {r['nombre']}** — {r['distancia_km']} km")
 
-    # Mapa
     df_estaciones = pd.DataFrame(resultados)
     df_usuario = pd.DataFrame([{"nombre": "Tu ubicación", "lat": lat, "lon": lon}])
 
@@ -90,6 +76,41 @@ if buscar:
 
     with st.expander("Ver datos en formato tabla"):
         st.dataframe(pd.concat([df_estaciones, df_usuario], ignore_index=True))
+
+
+# ---------- Interfaz ----------
+st.title("🚓 Estaciones Policiales Más Cercanas")
+st.write("Servicio en la nube que encuentra las estaciones policiales más cercanas según tu ubicación.")
+
+limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
+
+tab_gps, tab_manual = st.tabs(["📡 Usar mi ubicación", "✍️ Escribir coordenadas"])
+
+with tab_gps:
+    st.write("Presiona el botón y acepta el permiso de ubicación que te pida el navegador.")
+    ubicar = st.button("Usar mi ubicación actual")
+
+    if ubicar:
+        ubicacion = get_geolocation()  # pide permiso al navegador y trae GPS/wifi real
+        if ubicacion is not None:
+            lat = ubicacion["coords"]["latitude"]
+            lon = ubicacion["coords"]["longitude"]
+            st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
+            mostrar_resultados(lat, lon, limite)
+        else:
+            st.warning("No se pudo obtener tu ubicación. Revisa que le hayas dado permiso al navegador, o usa la pestaña de coordenadas manuales.")
+
+with tab_manual:
+    with st.form("form_manual"):
+        col1, col2 = st.columns(2)
+        with col1:
+            lat_m = st.number_input("Latitud", value=14.0818, format="%.6f")
+        with col2:
+            lon_m = st.number_input("Longitud", value=-87.1921, format="%.6f")
+        buscar_manual = st.form_submit_button("Buscar")
+
+    if buscar_manual:
+        mostrar_resultados(lat_m, lon_m, limite)
 
 st.divider()
 st.caption("Proyecto de clase — Cloud Computing. Estaciones cargadas desde estaciones.json.")
