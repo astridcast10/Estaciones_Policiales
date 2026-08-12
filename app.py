@@ -13,135 +13,200 @@ st.set_page_config(
 
 # ---------- Estilos ----------
 st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     html, body, [class*="css"] {
         font-family: 'Poppins', sans-serif;
     }
     .stApp {
-        background: linear-gradient(180deg, #f4f6fb 0%, #eef1f8 100%);
+        background: #f4f6f4;
     }
+
+    /* ---------- Banner ---------- */
     .banner-policia {
-        background: linear-gradient(135deg, #0b1f4d 0%, #16327a 55%, #b91c1c 100%);
-        padding: 28px 30px;
-        border-radius: 16px;
+        background: linear-gradient(135deg, #7fa39c 0%, #5f8b83 100%);
+        padding: 34px 34px 30px 34px;
+        border-radius: 22px;
         color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 24px rgba(11,31,77,0.28);
+        margin-bottom: 22px;
+        position: relative;
+        overflow: hidden;
+    }
+    .banner-policia::before {
+        content: "";
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 160px;
+        height: 160px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
     }
     .banner-policia h1 {
         color: white !important;
         margin: 0 0 8px 0;
-        font-size: 1.8rem;
+        font-size: 1.9rem;
         font-weight: 700;
+        letter-spacing: -0.3px;
     }
     .banner-policia p {
         margin: 0;
-        color: #dbe4ff;
+        color: #eaf3f0;
         font-size: 0.97rem;
-        line-height: 1.4;
+        line-height: 1.5;
+        max-width: 560px;
     }
     .stats-fila {
         display: flex;
-        gap: 12px;
-        margin-top: 16px;
+        gap: 10px;
+        margin-top: 18px;
         flex-wrap: wrap;
     }
     .stat-chip {
-        background: rgba(255,255,255,0.14);
-        border: 1px solid rgba(255,255,255,0.25);
-        border-radius: 10px;
-        padding: 8px 14px;
-        font-size: 0.85rem;
+        background: rgba(255,255,255,0.16);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 999px;
+        padding: 7px 16px;
+        font-size: 0.82rem;
         font-weight: 600;
+        backdrop-filter: blur(2px);
     }
+
+    /* ---------- Contenedor principal ---------- */
     .seccion-card {
         background: white;
-        border-radius: 16px;
-        padding: 22px 24px;
-        box-shadow: 0 3px 14px rgba(20,30,60,0.08);
+        border-radius: 22px;
+        padding: 26px 28px;
+        box-shadow: 0 4px 18px rgba(95,139,131,0.10);
         margin-bottom: 20px;
-        border: 1px solid #eceff5;
+        border: 1px solid #eef3f1;
     }
+
+    /* ---------- Tabs ---------- */
+    div[data-baseweb="tab-list"] {
+        gap: 6px;
+        background: #eaf1ef;
+        padding: 6px;
+        border-radius: 14px;
+    }
+    button[data-baseweb="tab"] {
+        border-radius: 10px !important;
+        font-weight: 600;
+        color: #3f5852 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background: white !important;
+        color: #33544c !important;
+    }
+    div[data-baseweb="tab-highlight"] { display: none; }
+
+    /* ---------- Inputs ---------- */
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextArea"] textarea {
+        border-radius: 12px !important;
+        border: 1px solid #dde7e3 !important;
+        background: #f7faf9 !important;
+    }
+
+    /* ---------- Botones ---------- */
+    div[data-testid="stButton"] > button,
+    div[data-testid="stFormSubmitButton"] > button {
+        background: #33544c;
+        color: white;
+        border: none;
+        border-radius: 999px;
+        padding: 10px 26px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    div[data-testid="stButton"] > button:hover,
+    div[data-testid="stFormSubmitButton"] > button:hover {
+        background: #274039;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    /* ---------- Tarjeta de ubicación detectada ---------- */
+    .tarjeta-ubicacion {
+        border: 1px dashed #7fa39c;
+        border-radius: 14px;
+        padding: 12px 18px;
+        background: #eef6f3;
+        color: #2f5148;
+        font-weight: 600;
+        margin-bottom: 16px;
+        font-size: 0.92rem;
+    }
+
+    /* ---------- Tarjetas de estaciones ---------- */
     .tarjeta-estacion {
-        border: 1px solid #eee0e0;
-        border-left: 7px solid #b91c1c;
-        border-radius: 12px;
-        padding: 14px 18px;
-        margin-bottom: 12px;
-        background: #fffafa;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #eef1ef;
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        background: #fbfdfc;
+        box-shadow: 0 2px 10px rgba(60,90,84,0.06);
+        position: relative;
     }
     .tarjeta-estacion .num {
         display: inline-block;
-        background: #b91c1c;
+        background: #7fa39c;
         color: white;
         font-weight: 700;
         border-radius: 50%;
-        width: 26px;
-        height: 26px;
+        width: 28px;
+        height: 28px;
         text-align: center;
-        line-height: 26px;
-        margin-right: 8px;
+        line-height: 28px;
+        margin-right: 10px;
         font-size: 0.9rem;
     }
     .tarjeta-estacion .nombre {
-        font-size: 1.02rem;
+        font-size: 1.03rem;
         font-weight: 700;
-        color: #0b1f4d;
+        color: #2b3d38;
     }
     .tarjeta-estacion .distancia {
         display: inline-block;
-        background: #16327a;
+        background: #33544c;
         color: white;
         border-radius: 999px;
-        padding: 3px 13px;
+        padding: 4px 14px;
         font-size: 0.8rem;
         font-weight: 600;
-        margin-left: 6px;
         float: right;
     }
     .tiempos-fila {
         display: flex;
         gap: 8px;
-        margin-top: 10px;
+        margin-top: 12px;
         flex-wrap: wrap;
     }
     .tiempo-pill {
-        background: #eef1fb;
-        border: 1px solid #ccd6f5;
-        border-radius: 8px;
-        padding: 6px 11px;
+        background: #eaf1ef;
+        border: 1px solid #d8e6e1;
+        border-radius: 999px;
+        padding: 6px 13px;
         font-size: 0.82rem;
-        color: #16327a;
+        color: #33544c;
         font-weight: 600;
     }
-    .tarjeta-ubicacion {
-        border: 1px dashed #16a34a;
-        border-radius: 10px;
-        padding: 10px 16px;
-        background: #eafaf0;
-        color: #15803d;
-        font-weight: 600;
-        margin-bottom: 14px;
-    }
-    div[data-baseweb="tab-list"] {
-        gap: 6px;
-        background: #eef1f8;
-        padding: 6px;
-        border-radius: 12px;
-    }
-    button[data-baseweb="tab"] {
-        border-radius: 8px !important;
-        font-weight: 600;
-    }
+
+    /* ---------- Footer ---------- */
     .footer-nota {
         text-align: center;
-        color: #7c869b;
+        color: #8a9a95;
         font-size: 0.8rem;
-        margin-top: 26px;
-        padding-top: 14px;
-        border-top: 1px solid #e2e6f0;
+        margin-top: 28px;
+        padding-top: 16px;
+        border-top: 1px solid #e5ece9;
+    }
+
+    /* ---------- Titulos de sección ---------- */
+    h3 {
+        color: #2b3d38 !important;
+        font-weight: 700 !important;
     }
 </style>
 """, unsafe_allow_html=True)
