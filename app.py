@@ -1,8 +1,10 @@
 import json
 import math
 import time
+import requests
 import streamlit as st
 import folium
+from folium.plugins import AntPath
 from streamlit_folium import st_folium
 from streamlit_js_eval import get_geolocation
 
@@ -239,6 +241,29 @@ def estimar_tiempos(distancia_km):
     return {modo: distancia_km / vel * 60 for modo, vel in VELOCIDADES_KMH.items()}
 
 
+@st.cache_data(show_spinner=False, ttl=600)
+def obtener_ruta_osrm(lat1, lon1, lat2, lon2):
+    """Pide una ruta real por calles (no línea recta) a la API pública de OSRM."""
+    url = (
+        "https://router.project-osrm.org/route/v1/driving/"
+        f"{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
+    )
+    try:
+        resp = requests.get(url, timeout=6)
+        data = resp.json()
+        if data.get("code") == "Ok" and data.get("routes"):
+            ruta = data["routes"][0]
+            coords = [[c[1], c[0]] for c in ruta["geometry"]["coordinates"]]
+            return {
+                "coords": coords,
+                "distancia_km": ruta["distance"] / 1000,
+                "duracion_min": ruta["duration"] / 60,
+            }
+    except Exception:
+        pass
+    return None
+
+
 def buscar_estaciones_cercanas(lat, lon, limite=3):
     resultados = []
     for est in ESTACIONES:
@@ -253,7 +278,7 @@ def buscar_estaciones_cercanas(lat, lon, limite=3):
     return resultados[:limite]
 
 
-def dibujar_mapa(lat, lon, resultados):
+def dibujar_mapa(lat, lon, resultados, ruta_coords=None):
     mapa = folium.Map(location=[lat, lon], zoom_start=11, tiles=None, control_scale=True)
 
     folium.TileLayer(
@@ -288,12 +313,23 @@ def dibujar_mapa(lat, lon, resultados):
         ).add_to(mapa)
         puntos.append([r["lat"], r["lon"]])
 
+    if ruta_coords:
+        AntPath(
+            locations=ruta_coords,
+            delay=800,
+            dash_array=[12, 22],
+            weight=5,
+            color="#33544c",
+            pulse_color="#eafaf0",
+        ).add_to(mapa)
+        puntos.extend(ruta_coords)
+
     mapa.fit_bounds(puntos, padding=(40, 40))
     folium.LayerControl(position="topright").add_to(mapa)
     return mapa
 
 
-def mostrar_resultados(lat, lon, limite):
+def mostrar_resultados(lat, lon, limite, key_prefix="res"):
     resultados = buscar_estaciones_cercanas(lat, lon, limite)
 
     st.markdown(
@@ -319,9 +355,61 @@ def mostrar_resultados(lat, lon, limite):
 
     st.caption("⏱️ Tiempos estimados según distancia en línea recta y velocidad promedio de cada medio (no son rutas reales de calles ni horarios de bus).")
 
+    # ---------- Ruta hacia la estación seleccionada ----------
+    seleccion = st.session_state.get("estacion_seleccionada")
+    ruta_info = None
+    if seleccion:
+        sigue_visible = any(
+            abs(r["lat"] - seleccion["lat"]) < 0.0005 and abs(r["lon"] - seleccion["lon"]) < 0.0005
+            for r in resultados
+        )
+        if sigue_visible:
+            with st.spinner("Calculando ruta..."):
+                ruta_info = obtener_ruta_osrm(lat, lon, seleccion["lat"], seleccion["lon"])
+        else:
+            st.session_state["estacion_seleccionada"] = None
+            seleccion = None
+
     st.subheader("🗺️ Mapa")
-    mapa = dibujar_mapa(lat, lon, resultados)
-    st_folium(mapa, width=None, height=460, returned_objects=[])
+
+    if seleccion:
+        col_info, col_btn = st.columns([4, 1])
+        with col_info:
+            if ruta_info:
+                st.info(
+                    f"🚗 Ruta hacia **{seleccion['nombre']}**: "
+                    f"{ruta_info['distancia_km']:.1f} km · {formatear_minutos(ruta_info['duracion_min'])} en carro"
+                )
+            else:
+                st.warning("No se pudo calcular la ruta por calles en este momento.")
+        with col_btn:
+            if st.button("✖️ Quitar ruta", key=f"{key_prefix}_quitar_ruta"):
+                st.session_state["estacion_seleccionada"] = None
+                st.rerun()
+    else:
+        st.caption("👆 Haz clic en un marcador de estación en el mapa para trazar la ruta desde tu ubicación.")
+
+    mapa = dibujar_mapa(lat, lon, resultados, ruta_info["coords"] if ruta_info else None)
+    map_data = st_folium(
+        mapa,
+        width=None,
+        height=460,
+        returned_objects=["last_object_clicked"],
+        key=f"{key_prefix}_mapa",
+    )
+
+    # ---------- Detectar clic sobre una estación ----------
+    if map_data and map_data.get("last_object_clicked"):
+        click = map_data["last_object_clicked"]
+        clat, clon = click.get("lat"), click.get("lng")
+        if clat is not None and clon is not None:
+            for r in resultados:
+                if abs(r["lat"] - clat) < 0.0005 and abs(r["lon"] - clon) < 0.0005:
+                    nueva_seleccion = {"nombre": r["nombre"], "lat": r["lat"], "lon": r["lon"]}
+                    if st.session_state.get("estacion_seleccionada") != nueva_seleccion:
+                        st.session_state["estacion_seleccionada"] = nueva_seleccion
+                        st.rerun()
+                    break
 
 
 # ---------- Interfaz ----------
@@ -361,7 +449,7 @@ with st.container(border=True):
                 lat = ubicacion["coords"]["latitude"]
                 lon = ubicacion["coords"]["longitude"]
                 st.success(f"Ubicación detectada: {lat:.6f}, {lon:.6f}")
-                mostrar_resultados(lat, lon, limite)
+                mostrar_resultados(lat, lon, limite, key_prefix="gps")
             else:
                 intentos = st.session_state.get("gps_poll", 0)
                 if intentos < MAX_INTENTOS_GPS:
@@ -389,4 +477,4 @@ with st.container(border=True):
             buscar_manual = st.form_submit_button("Buscar")
 
         if buscar_manual:
-            mostrar_resultados(lat_m, lon_m, limite)
+            mostrar_resultados(lat_m, lon_m, limite, key_prefix="manual")
