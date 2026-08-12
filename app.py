@@ -1,5 +1,6 @@
 import json
 import math
+import requests
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
@@ -7,9 +8,17 @@ from streamlit_js_eval import get_geolocation
 
 st.set_page_config(page_title="Estaciones Policiales Cercanas", page_icon="🚓", layout="centered")
 
-# ---------- Cargar datos ----------
+# ---------- Estaciones de respaldo (por si OpenStreetMap no responde) ----------
 with open("estaciones.json", "r", encoding="utf-8") as f:
-    ESTACIONES = json.load(f)
+    ESTACIONES_RESPALDO = json.load(f)
+
+# ---------- Velocidades promedio para estimar tiempo de llegada ----------
+VELOCIDADES_KMH = {
+    "🚶 A pie": 5,
+    "🚴 Bicicleta": 15,
+    "🚗 Carro": 35,
+    "🚌 Bus": 18,
+}
 
 
 # ---------- Fórmula de Haversine ----------
@@ -23,26 +32,110 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 
+def formatear_minutos(minutos):
+    if minutos < 60:
+        return f"{minutos:.0f} min"
+    horas = int(minutos // 60)
+    mins = int(minutos % 60)
+    return f"{horas} h {mins} min"
+
+
+def estimar_tiempos(distancia_km):
+    """Estimado a partir de distancia en línea recta / velocidad promedio de cada medio.
+    No es una ruta real (no considera calles, tráfico, rutas de bus), es una aproximación."""
+    return {modo: distancia_km / vel * 60 for modo, vel in VELOCIDADES_KMH.items()}
+
+
+# ---------- Buscar estaciones policiales reales en OpenStreetMap ----------
+@st.cache_data(show_spinner=False, ttl=3600)
+def obtener_estaciones_osm(lat, lon):
+    """Busca puestos policiales reales cerca de (lat, lon) usando la API pública
+    Overpass de OpenStreetMap, ampliando el radio de búsqueda si hace falta."""
+    radios_m = [3000, 6000, 12000, 25000, 50000]
+    for radio in radios_m:
+        query = f"""
+        [out:json][timeout:20];
+        (
+          node["amenity"="police"](around:{radio},{lat},{lon});
+          way["amenity"="police"](around:{radio},{lat},{lon});
+          relation["amenity"="police"](around:{radio},{lat},{lon});
+        );
+        out center;
+        """
+        try:
+            resp = requests.post(
+                "https://overpass-api.de/api/interpreter",
+                data={"data": query},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception:
+            continue
+
+        estaciones = []
+        for el in data.get("elements", []):
+            if el["type"] == "node":
+                elat, elon = el.get("lat"), el.get("lon")
+            else:
+                centro = el.get("center", {})
+                elat, elon = centro.get("lat"), centro.get("lon")
+            if elat is None or elon is None:
+                continue
+            nombre = el.get("tags", {}).get("name") or "Puesto policial (OpenStreetMap)"
+            estaciones.append({"nombre": nombre, "lat": elat, "lon": elon})
+
+        if len(estaciones) >= 3:
+            return estaciones, radio
+
+    return [], None
+
+
 def buscar_estaciones_cercanas(lat, lon, limite=3):
+    estaciones_reales, radio_usado = obtener_estaciones_osm(lat, lon)
+
+    if estaciones_reales:
+        fuente = "osm"
+        catalogo = estaciones_reales
+    else:
+        fuente = "respaldo"
+        catalogo = ESTACIONES_RESPALDO
+
     resultados = []
-    for est in ESTACIONES:
+    for est in catalogo:
         distancia = haversine(lat, lon, est["lat"], est["lon"])
         resultados.append({
             "nombre": est["nombre"],
             "lat": est["lat"],
             "lon": est["lon"],
-            "distancia_km": round(distancia, 2)
+            "distancia_km": round(distancia, 2),
         })
     resultados.sort(key=lambda x: x["distancia_km"])
-    return resultados[:limite]
+    return resultados[:limite], fuente
 
 
 def mostrar_resultados(lat, lon, limite):
-    resultados = buscar_estaciones_cercanas(lat, lon, limite)
+    with st.spinner("Buscando estaciones policiales reales cerca de tu ubicación..."):
+        resultados, fuente = buscar_estaciones_cercanas(lat, lon, limite)
+
+    if fuente == "respaldo":
+        st.warning(
+            "No se encontraron puestos policiales registrados en OpenStreetMap cerca de tu "
+            "ubicación (o el servicio no respondió), así que se muestran estaciones de respaldo "
+            "de ejemplo. En una emergencia real, llama al 911."
+        )
+    else:
+        st.caption("Estaciones obtenidas en tiempo real desde OpenStreetMap.")
 
     st.subheader("📍 Resultados")
     for i, r in enumerate(resultados, start=1):
+        tiempos = estimar_tiempos(r["distancia_km"])
         st.markdown(f"**{i}. {r['nombre']}** — {r['distancia_km']} km")
+        cols = st.columns(len(tiempos))
+        for col, (modo, minutos) in zip(cols, tiempos.items()):
+            col.metric(modo, formatear_minutos(minutos))
+
+    st.caption("⏱️ Tiempos estimados según distancia en línea recta y velocidad promedio de cada medio (no son rutas reales de calles ni horarios de bus).")
 
     df_estaciones = pd.DataFrame(resultados)
     df_usuario = pd.DataFrame([{"nombre": "Tu ubicación", "lat": lat, "lon": lon}])
@@ -52,7 +145,7 @@ def mostrar_resultados(lat, lon, limite):
         "width": 128, "height": 128, "anchorY": 64,
     }
     ICONO_USUARIO = {
-        "url": "data:image/png;base64,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",
+        "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACoCAYAAAAbi7hDAAAABmJLR0QA/wD/AP+gvaeTAAABsklEQVR4nO3dwW3CQBBAUYNoIJ2EEnJIA1TgHrhwoIJUAMdcOaVGSCFOh05CDmYtZE/8DsBefv7fTLpqNMc4a4wCq7X24pw7lVJezWx0zpXW2mSMma/72Y96ZlrPn/3JzE7GmMcYY/w3fD/RdlrgD9BaP4YQTlmXPlrgz/HeH0IIp5xnfRfg+Xnv8977Y65zP4ppzo3btm2ap1yvz2yBH9Bau9Va+7KsWXovwHRttXaz3jsFqNZaJWUxaBQghhi7VgFCCB8ppcQoQIoxvqUeMwqQUnpPPWYUIMY4pR4zClCttWvKNXddV0Q4UcolY13XZlmWZlqOwiCEUKy1V+/9WLbtqIN0XVdaa0Nr7cs5V3rvi3lqNsY0QRkVYFVKGZ1zt6VVXf2SbbmU8jf7WjWDFECAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCiCAAggQCvADBAoOtcVUDsIAAAAASUVORK5CYII=",
         "width": 128, "height": 168, "anchorY": 168,
     }
 
@@ -89,12 +182,16 @@ def mostrar_resultados(lat, lon, limite):
     st.caption("🛡️ Estaciones policiales &nbsp;&nbsp; 📍 Tu ubicación")
 
     with st.expander("Ver datos en formato tabla"):
-        st.dataframe(pd.concat([df_estaciones, df_usuario], ignore_index=True))
+        st.dataframe(pd.concat([df_estaciones.drop(columns="icon"), df_usuario.drop(columns="icon")], ignore_index=True))
 
 
 # ---------- Interfaz ----------
 st.title("🚓 Estaciones Policiales Más Cercanas")
-st.write("Servicio en la nube que encuentra las estaciones policiales más cercanas según tu ubicación.")
+st.write(
+    "Servicio en la nube que encuentra las estaciones policiales reales más cercanas a tu "
+    "ubicación (usando OpenStreetMap) y estima cuánto tardarías en llegar a pie, en bici, "
+    "en carro o en bus."
+)
 
 limite = st.number_input("Cantidad de estaciones a mostrar", min_value=1, max_value=5, value=3)
 
@@ -131,4 +228,7 @@ with tab_manual:
         mostrar_resultados(lat_m, lon_m, limite)
 
 st.divider()
-st.caption("Proyecto de clase — Cloud Computing. Estaciones cargadas desde estaciones.json.")
+st.caption(
+    "Proyecto de clase — Cloud Computing. Estaciones en tiempo real vía OpenStreetMap/Overpass; "
+    "si no hay datos disponibles cerca, se usa un respaldo de ejemplo (estaciones.json)."
+)
